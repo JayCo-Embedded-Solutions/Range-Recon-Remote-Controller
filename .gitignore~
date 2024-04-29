@@ -10,6 +10,7 @@ Release/
 
 *.mxproj
 *.mxproject
+*.launch
 
 *.user
 *.user.*
