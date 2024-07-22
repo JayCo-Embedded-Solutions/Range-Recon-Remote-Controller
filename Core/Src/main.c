@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "nRF24l01.h"
 #include <stdio.h>
+#include <string.h>
 
 /* USER CODE END Includes */
 
@@ -51,8 +52,10 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
-uint32_t xVal;
-uint32_t yVal;
+uint32_t xVal = 0;
+uint32_t yVal = 0;
+uint32_t pitch = 0;
+uint32_t roll = 0;
 
 /* USER CODE END PV */
 
@@ -111,11 +114,13 @@ int main(void)
   nRF24Init();
   nRF24TxMode(txAddress, 10);
 
-  uint32_t adcReading[2];
-  HAL_ADC_Start_DMA(&hadc1, adcReading, 2);
+  uint32_t adcReading[4];
+  HAL_ADC_Start_DMA(&hadc1, adcReading, 4);
 
-  bool check = true;
+  char buf[100];
 
+  sprintf(buf, "starting loop...\r\n");
+  HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), HAL_MAX_DELAY);
 
   /* USER CODE END 2 */
 
@@ -128,25 +133,41 @@ int main(void)
     /* USER CODE BEGIN 3 */
     xVal = adcReading[0];
     yVal = adcReading[1];
+    pitch = adcReading[2];
+    roll = adcReading[3];
 
-    uint8_t txData[8];
+    uint8_t txData[16];
+
+    // Throttle
     txData[0] = (adcReading[0] & 0xFF000000) >> 24;
     txData[1] = (adcReading[0] & 0x00FF0000) >> 16;
     txData[2] = (adcReading[0] & 0x0000FF00) >> 8;
     txData[3] = (adcReading[0] & 0x000000FF);
+
+    // Yaw
     txData[4] = (adcReading[1] & 0xFF000000) >> 24;
     txData[5] = (adcReading[1] & 0x00FF0000) >> 16;
     txData[6] = (adcReading[1] & 0x0000FF00) >> 8;
     txData[7] = (adcReading[1] & 0x000000FF);
 
-    uint32_t convertedX = (xVal > 2200) ? (xVal-2200)/100 + 60 : 0;
-    char buf[50];
-    sprintf(buf, "xVal: %u\r\n", convertedX);
+    // Pitch
+    txData[8] = (adcReading[2] & 0xFF000000) >> 24;
+    txData[9] = (adcReading[2] & 0x00FF0000) >> 16;
+    txData[10] = (adcReading[2] & 0x0000FF00) >> 8;
+    txData[11] = (adcReading[2] & 0x000000FF);
 
+    // Roll
+    txData[12] = (adcReading[3] & 0xFF000000) >> 24;
+    txData[13] = (adcReading[3] & 0x00FF0000) >> 16;
+    txData[14] = (adcReading[3] & 0x0000FF00) >> 8;
+    txData[15] = (adcReading[3] & 0x000000FF);
+
+    sprintf(buf, "throttle:%lu,yaw:%lu,pitch:%lu,roll:%lu\r\n", xVal, yVal, pitch, roll);
     HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), 1000);
 
-    if (nRF24Transmit(txData, 8) != 0) {
-      check = false;
+    if (nRF24Transmit(txData, 16) != 0) {
+      sprintf(buf, "ERROR: transmission failed!\r\n");
+      HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), HAL_MAX_DELAY);
     }
 
   }
@@ -222,7 +243,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 2;
+  hadc1.Init.NbrOfConversion = 4;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -230,7 +251,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_6;
+  sConfig.Channel = ADC_CHANNEL_5;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -240,8 +261,26 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_5;
+  sConfig.Channel = ADC_CHANNEL_6;
   sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = ADC_REGULAR_RANK_4;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();

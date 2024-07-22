@@ -57,10 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define STICK2_X_Pin GPIO_PIN_5
-#define STICK2_X_GPIO_Port GPIOA
-#define STICK2_Y_Pin GPIO_PIN_6
-#define STICK2_Y_GPIO_Port GPIOA
+#define YAW_Pin GPIO_PIN_5
+#define YAW_GPIO_Port GPIOA
+#define THROTTLE_Pin GPIO_PIN_6
+#define THROTTLE_GPIO_Port GPIOA
+#define ROLL_Pin GPIO_PIN_7
+#define ROLL_GPIO_Port GPIOA
+#define PITCH_Pin GPIO_PIN_0
+#define PITCH_GPIO_Port GPIOB
 #define NRF24_CE_Pin GPIO_PIN_12
 #define NRF24_CE_GPIO_Port GPIOB
 #define NRF24_CS_Pin GPIO_PIN_6
